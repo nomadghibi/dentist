@@ -59,12 +59,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Update dentist
+    const adminUserId = adminUser.id; // Extract to help TypeScript
     await db
       .update(dentists)
       .set({
         verifiedStatus: verified ? "verified" : "unverified",
         verifiedAt: verified ? new Date() : null,
-        verifiedByAdminId: verified ? adminUser.id : null,
+        verifiedByAdminId: verified ? adminUserId : null,
         verificationSource: verificationSource || null,
         updatedAt: new Date(),
       })
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     // Log audit
     await db.insert(adminAudit).values({
-      adminUserId: adminUser.id,
+      adminUserId: adminUserId,
       action: verified ? "verify" : "unverify",
       entityType: "dentist",
       entityId: dentistId,

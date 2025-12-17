@@ -13,8 +13,16 @@ const verifySchema = z.object({
 });
 
 type User = InferSelectModel<typeof users>;
+type AdminUser = User & { role: "admin" };
 
-async function getAdminUser(request: NextRequest): Promise<User | null> {
+/**
+ * Type guard to check if user is an admin
+ */
+function isAdmin(user: User | null | undefined): user is AdminUser {
+  return user !== null && user !== undefined && user.role === "admin";
+}
+
+async function getAdminUser(request: NextRequest): Promise<AdminUser | null> {
   const session = await getServerSession(request);
   
   if (!session || session.role !== "admin") {
@@ -24,7 +32,11 @@ async function getAdminUser(request: NextRequest): Promise<User | null> {
   // Fetch the full user record from database
   const [user] = await db.select().from(users).where(eq(users.id, session.userId)).limit(1);
   
-  return user || null;
+  if (!user || !isAdmin(user)) {
+    return null;
+  }
+  
+  return user;
 }
 
 export async function POST(request: NextRequest) {

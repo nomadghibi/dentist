@@ -4,6 +4,7 @@ import { dentists, adminAudit, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { getServerSession } from "@/lib/auth";
+import type { InferSelectModel } from "drizzle-orm";
 
 const verifySchema = z.object({
   dentistId: z.string().uuid(),
@@ -11,7 +12,9 @@ const verifySchema = z.object({
   verificationSource: z.string().optional(),
 });
 
-async function getAdminUser(request: NextRequest) {
+type User = InferSelectModel<typeof users>;
+
+async function getAdminUser(request: NextRequest): Promise<User | null> {
   const session = await getServerSession(request);
   
   if (!session || session.role !== "admin") {

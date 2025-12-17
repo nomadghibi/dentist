@@ -67,34 +67,9 @@ export default async function ServicePage({ params, searchParams }: PageProps) {
   const query: RankingQuery = { service };
   const sorted = sortDentists(cityDentists, query);
 
-  // Fetch featured dentists
+  // Fetch featured dentists - select all fields to match Dentist type
   const featuredDentists = await db
-    .select({
-      id: dentists.id,
-      npi: dentists.npi,
-      slug: dentists.slug,
-      name: dentists.name,
-      citySlug: dentists.citySlug,
-      cityName: dentists.cityName,
-      state: dentists.state,
-      address: dentists.address,
-      phone: dentists.phone,
-      website: dentists.website,
-      taxonomy: dentists.taxonomy,
-      lat: dentists.lat,
-      lng: dentists.lng,
-      servicesFlags: dentists.servicesFlags,
-      insurances: dentists.insurances,
-      languages: dentists.languages,
-      hours: dentists.hours,
-      completenessScore: dentists.completenessScore,
-      verifiedStatus: dentists.verifiedStatus,
-      verifiedAt: dentists.verifiedAt,
-      verifiedByAdminId: dentists.verifiedByAdminId,
-      verificationSource: dentists.verificationSource,
-      updatedAt: dentists.updatedAt,
-      createdAt: dentists.createdAt,
-    })
+    .select()
     .from(dentists)
     .innerJoin(subscriptions, eq(dentists.id, subscriptions.dentistId))
     .where(
@@ -104,10 +79,12 @@ export default async function ServicePage({ params, searchParams }: PageProps) {
         or(eq(subscriptions.plan, "pro"), eq(subscriptions.plan, "premium"))
       )
     )
-    .then((list) =>
-      list.filter((d) => {
-        return d.servicesFlags?.[serviceKey as keyof typeof d.servicesFlags] === true;
-      })
+    .then((results) =>
+      results
+        .map((r) => r.dentists) // Extract dentists from join result
+        .filter((d) => {
+          return d.servicesFlags?.[serviceKey as keyof typeof d.servicesFlags] === true;
+        })
     );
 
   const finalList = injectFeatured(sorted, featuredDentists, {

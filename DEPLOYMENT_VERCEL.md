@@ -218,7 +218,7 @@ AND table_name IN (
 | Ingest (Melbourne) | `10 2 * * *` | Daily at 2:10 AM |
 | Ingest (Space Coast) | `20 2 * * *` | Daily at 2:20 AM |
 | Rank Snapshots | `0 3 * * 0` | Weekly on Sunday at 3:00 AM |
-| Follow-ups | `0 */6 * * *` | Every 6 hours |
+| Follow-ups | `0 4 * * *` | Daily at 4:00 AM |
 
 ## Troubleshooting
 

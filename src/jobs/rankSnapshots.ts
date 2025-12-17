@@ -5,7 +5,7 @@
 
 import { db } from "@/db";
 import { dentists, rankSnapshots } from "@/db/schema";
-import { eq, and, gte } from "drizzle-orm";
+import { eq, and, gte, isNull } from "drizzle-orm";
 import { sortDentists } from "@/lib/ranking";
 
 /**
@@ -47,7 +47,7 @@ export async function runRankSnapshotsJob(): Promise<{
           and(
             eq(rankSnapshots.dentistId, dentist.id),
             eq(rankSnapshots.citySlug, citySlug),
-            eq(rankSnapshots.serviceSlug, null),
+            isNull(rankSnapshots.serviceSlug),
             gte(rankSnapshots.createdAt, weekStart)
           )
         )

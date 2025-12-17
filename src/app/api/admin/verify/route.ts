@@ -3,10 +3,7 @@ import { db } from "@/db";
 import { dentists, adminAudit, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { verifyPassword, getUserByEmail } from "@/lib/auth";
-
-// TODO: Implement proper session/auth middleware
-// For now, this is a placeholder that checks basic auth header
+import { getServerSession } from "@/lib/auth";
 
 const verifySchema = z.object({
   dentistId: z.string().uuid(),
@@ -15,16 +12,16 @@ const verifySchema = z.object({
 });
 
 async function getAdminUser(request: NextRequest) {
-  // TODO: Replace with proper session check
-  // For MVP, we'll use a simple header check or session cookie
-  const authHeader = request.headers.get("authorization");
-  if (!authHeader) {
+  const session = await getServerSession(request);
+  
+  if (!session || session.role !== "admin") {
     return null;
   }
 
-  // Basic auth or token - adjust based on your auth implementation
-  // This is a placeholder
-  return null;
+  // Fetch the full user record from database
+  const [user] = await db.select().from(users).where(eq(users.id, session.userId)).limit(1);
+  
+  return user || null;
 }
 
 export async function POST(request: NextRequest) {

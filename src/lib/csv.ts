@@ -18,34 +18,27 @@ export function escapeCSVValue(value: unknown): string {
 }
 
 export function writeCSV<T extends Record<string, unknown>>(
-  data: T[],
-  headers: (keyof T)[]
+  rows: T[],
+  headers: Array<keyof T | string>
 ): string {
-  if (data.length === 0) {
-    return headers.map(escapeCSVValue).join(",") + "\n";
-  }
+  const headerStrings = headers.map(String);
+
+  const escape = (value: unknown) => {
+    if (value === null || value === undefined) return "";
+    const s = String(value);
+    const needsQuotes = /[",\n\r]/.test(s);
+    const escaped = s.replace(/"/g, '""');
+    return needsQuotes ? `"${escaped}"` : escaped;
+  };
 
   const lines: string[] = [];
+  lines.push(headerStrings.join(","));
 
-  // Header row
-  lines.push(headers.map(escapeCSVValue).join(","));
-
-  // Data rows
-  for (const row of data) {
-    const values = headers.map((header) => {
-      const value = row[header];
-      
-      // Handle array values (like hours)
-      if (Array.isArray(value)) {
-        return escapeCSVValue(value.join("; "));
-      }
-      
-      return escapeCSVValue(value);
-    });
-    
-    lines.push(values.join(","));
+  for (const row of rows) {
+    const line = headerStrings.map((h) => escape((row as any)[h]));
+    lines.push(line.join(","));
   }
 
-  return lines.join("\n");
+  return lines.join("\n") + "\n";
 }
 

@@ -72,34 +72,9 @@ export async function GET(request: NextRequest) {
     // Sort
     const sorted = sortDentists(cityDentists, query);
 
-    // Get featured
+    // Get featured - select all fields to match Dentist type
     const featuredDentists = await db
-      .select({
-        id: dentists.id,
-        npi: dentists.npi,
-        slug: dentists.slug,
-        name: dentists.name,
-        citySlug: dentists.citySlug,
-        cityName: dentists.cityName,
-        state: dentists.state,
-        address: dentists.address,
-        phone: dentists.phone,
-        website: dentists.website,
-        taxonomy: dentists.taxonomy,
-        lat: dentists.lat,
-        lng: dentists.lng,
-        servicesFlags: dentists.servicesFlags,
-        insurances: dentists.insurances,
-        languages: dentists.languages,
-        hours: dentists.hours,
-        completenessScore: dentists.completenessScore,
-        verifiedStatus: dentists.verifiedStatus,
-        verifiedAt: dentists.verifiedAt,
-        verifiedByAdminId: dentists.verifiedByAdminId,
-        verificationSource: dentists.verificationSource,
-        updatedAt: dentists.updatedAt,
-        createdAt: dentists.createdAt,
-      })
+      .select()
       .from(dentists)
       .innerJoin(subscriptions, eq(dentists.id, subscriptions.dentistId))
       .where(
@@ -108,7 +83,8 @@ export async function GET(request: NextRequest) {
           eq(subscriptions.status, "active"),
           or(eq(subscriptions.plan, "pro"), eq(subscriptions.plan, "premium"))
         )
-      );
+      )
+      .then((results) => results.map((r) => r.dentists)); // Extract dentists from join result
 
     const finalList = injectFeatured(sorted, featuredDentists, {
       maxFeatured: 5,

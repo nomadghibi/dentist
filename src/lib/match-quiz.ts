@@ -7,18 +7,19 @@ import type { MatchQuizAnswers } from "@/lib/validators/match";
 import type { Dentist } from "@/lib/ranking";
 
 // Extend Dentist type to include new Phase 1 fields
-interface ExtendedDentist extends Dentist {
+// Use Omit to allow optional override of acceptingNewPatients
+interface ExtendedDentist extends Omit<Dentist, "acceptingNewPatients" | "availabilityFlags" | "badges"> {
   availabilityFlags?: {
     same_week?: boolean;
     emergency_today?: boolean;
     weekend?: boolean;
-  };
+  } | null;
   acceptingNewPatients?: boolean | null;
   badges?: {
     anxiety_friendly?: boolean;
     pediatric_friendly?: boolean;
     [key: string]: boolean | undefined;
-  };
+  } | null;
 }
 
 export interface MatchReason {
@@ -178,7 +179,7 @@ export function matchDentists(
     score = Math.max(0, Math.min(100, score));
 
     scored.push({
-      dentist,
+      dentist: dentist as Dentist,
       score,
       reasons: reasons.sort((a, b) => b.weight - a.weight), // Sort by weight descending
     });
@@ -193,6 +194,7 @@ export function matchDentists(
       reasons: result.reasons.map((r) => ({
         code: r.code,
         message: r.message,
+        weight: r.weight,
       })),
     }));
 }

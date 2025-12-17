@@ -62,7 +62,7 @@
     },
     {
       "path": "/api/cron/followups",
-      "schedule": "0 */6 * * *"
+      "schedule": "0 4 * * *"
     }
   ]
 }

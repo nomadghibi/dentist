@@ -1,5 +1,5 @@
-import { writeFile, mkdir, readFileSync } from "fs/promises";
-import { existsSync, readFileSync as readFileSyncSync } from "fs";
+import { writeFile, mkdir, readFile } from "fs/promises";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { writeCSV } from "@/lib/csv";
 
@@ -9,7 +9,7 @@ import { writeCSV } from "@/lib/csv";
 function loadEnvFile() {
   const envPath = join(process.cwd(), ".env");
   if (existsSync(envPath)) {
-    const envContent = readFileSyncSync(envPath, "utf-8");
+    const envContent = readFileSync(envPath, "utf-8");
     const lines = envContent.split("\n");
     for (const line of lines) {
       const trimmed = line.trim();
@@ -379,7 +379,7 @@ async function saveData(citySlug: string, dentists: DentistData[]): Promise<void
 
   // Save CSV
   const csvPath = join(outputDir, `${citySlug}-dentists.csv`);
-  const csvContent = writeCSV(dentists, [
+  const csvContent = writeCSV(dentists as unknown as Record<string, unknown>[], [
     "name",
     "address",
     "city",

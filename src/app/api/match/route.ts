@@ -33,10 +33,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch dentists for city
-    const cityDentists = await db
+    const cityDentistsRaw = await db
       .select()
       .from(dentists)
       .where(eq(dentists.citySlug, answers.city));
+
+    // Transform database results to match ExtendedDentist type
+    // Convert null values to undefined for optional fields
+    const cityDentists = cityDentistsRaw.map((dentist) => ({
+      ...dentist,
+      availabilityFlags: dentist.availabilityFlags || undefined,
+      badges: dentist.badges || undefined,
+    }));
 
     // Match dentists
     const matches = matchDentists(cityDentists, answers);

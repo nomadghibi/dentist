@@ -1,0 +1,25 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/ingest?city=palm-bay",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?city=melbourne",
+      "schedule": "10 2 * * *"
+    },
+    {
+      "path": "/api/cron/ingest?city=space-coast",
+      "schedule": "20 2 * * *"
+    },
+    {
+      "path": "/api/cron/rank-snapshots",
+      "schedule": "0 3 * * 0"
+    },
+    {
+      "path": "/api/cron/followups",
+      "schedule": "0 */6 * * *"
+    }
+  ]
+}
+

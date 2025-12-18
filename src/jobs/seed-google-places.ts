@@ -1,4 +1,4 @@
-import { writeFile, mkdir, readFile } from "fs/promises";
+import { writeFile, mkdir } from "fs/promises";
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { writeCSV } from "@/lib/csv";
@@ -49,7 +49,7 @@ interface GooglePlace {
   url?: string;
 }
 
-interface DentistData {
+interface DentistData extends Record<string, unknown> {
   name: string;
   address: string;
   city: string;

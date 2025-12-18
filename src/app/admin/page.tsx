@@ -4,6 +4,8 @@ import { dentists, adminAudit } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
 
+export const dynamic = 'force-dynamic';
+
 // TODO: Add proper auth check
 
 export default async function AdminDashboardPage() {

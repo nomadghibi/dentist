@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { dentists } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
 
+export const dynamic = 'force-dynamic';
+
 async function getCityDentistCounts() {
   const counts = await db
     .select({

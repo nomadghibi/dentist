@@ -21,12 +21,12 @@ function isAdmin(user: User | null | undefined): user is AdminUser {
 
 async function getAdminUser(request: NextRequest): Promise<AdminUser | null> {
   const session = await getServerSession(request);
-
+  
   if (!session || session.role !== "admin") return null;
 
   const [user] = await db.select().from(users).where(eq(users.id, session.userId)).limit(1);
   if (!user || !isAdmin(user)) return null;
-
+  
   return user;
 }
 
@@ -49,11 +49,11 @@ export async function POST(request: NextRequest) {
     const adminUserId = adminUser.id;
 
     await db.update(dentists).set({
-      verifiedStatus: verified ? "verified" : "unverified",
-      verifiedAt: verified ? new Date() : null,
-      verifiedByAdminId: verified ? adminUserId : null,
-      verificationSource: verificationSource || null,
-      updatedAt: new Date(),
+        verifiedStatus: verified ? "verified" : "unverified",
+        verifiedAt: verified ? new Date() : null,
+        verifiedByAdminId: verified ? adminUserId : null,
+        verificationSource: verificationSource || null,
+        updatedAt: new Date(),
     }).where(eq(dentists.id, dentistId));
 
     await db.insert(adminAudit).values({

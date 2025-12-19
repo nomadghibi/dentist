@@ -130,8 +130,8 @@ export async function GET(request: NextRequest) {
       cityDentists = cityDentists.filter((d) => d.availabilityFlags?.emergency_today === true);
     }
 
-    if (query.radiusMiles && originCoords) {
-      const radiusMiles = query.radiusMiles;
+    const radiusMiles = query.radiusMiles;
+    if (radiusMiles !== undefined && originCoords) {
       cityDentists = cityDentists
         .map((d) => {
           const coords = parseCoordinates(d.lat, d.lng);

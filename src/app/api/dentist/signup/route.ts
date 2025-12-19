@@ -3,15 +3,15 @@ import {
   AUTH_COOKIE_NAME,
   SESSION_MAX_AGE_SECONDS,
   createToken,
+  createUser,
   getUserByEmail,
-  verifyPassword,
 } from "@/lib/auth";
 import { z } from "zod";
 import { rateLimit } from "@/lib/rate-limit";
 
-const loginSchema = z.object({
+const signupSchema = z.object({
   email: z.string().email(),
-  password: z.string(),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 export async function POST(request: NextRequest) {
@@ -26,26 +26,21 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { email, password } = loginSchema.parse(body);
+    const { email, password } = signupSchema.parse(body);
 
-    const user = await getUserByEmail(email);
-
-    if (!user) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
+    const existing = await getUserByEmail(email);
+    if (existing) {
+      return NextResponse.json({ error: "An account with this email already exists" }, { status: 409 });
     }
 
-    if (user.role !== "admin") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
-
-    const isValid = await verifyPassword(password, user.passwordHash);
-
-    if (!isValid) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
-    }
-
+    const user = await createUser(email, password, "dentist");
     const token = createToken(user.id, user.email, user.role);
-    const response = NextResponse.json({ success: true, userId: user.id });
+
+    const response = NextResponse.json({
+      success: true,
+      user: { id: user.id, email: user.email },
+    });
+
     response.cookies.set(AUTH_COOKIE_NAME, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -60,7 +55,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid input", details: error.errors }, { status: 400 });
     }
 
-    console.error("Error logging in:", error);
+    console.error("Error signing up:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

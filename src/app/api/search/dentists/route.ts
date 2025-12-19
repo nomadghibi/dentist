@@ -130,7 +130,8 @@ export async function GET(request: NextRequest) {
       cityDentists = cityDentists.filter((d) => d.availabilityFlags?.emergency_today === true);
     }
 
-    if (query.radiusMiles && originCoords) {
+    const radiusMiles = query.radiusMiles;
+    if (radiusMiles !== undefined && originCoords) {
       cityDentists = cityDentists
         .map((d) => {
           const coords = parseCoordinates(d.lat, d.lng);
@@ -140,7 +141,7 @@ export async function GET(request: NextRequest) {
             distance: haversineDistanceMiles(originCoords, coords),
           };
         })
-        .filter((item) => item.distance !== undefined && item.distance <= query.radiusMiles)
+        .filter((item) => item.distance !== undefined && item.distance <= radiusMiles)
         .map((item) => ({
           ...item.dentist,
           distanceMiles: item.distance,

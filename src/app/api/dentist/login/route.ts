@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserByEmail, verifyPassword, createToken } from "@/lib/auth";
+import {
+  AUTH_COOKIE_NAME,
+  SESSION_MAX_AGE_SECONDS,
+  createToken,
+  getUserByEmail,
+  verifyPassword,
+} from "@/lib/auth";
 import { z } from "zod";
 import { rateLimit } from "@/lib/rate-limit";
 
@@ -7,8 +13,7 @@ const loginSchema = z.object({
   email: z.string().email(),
   password: z.string(),
 });
-
-const COOKIE_NAME = "dentist_session";
+const COOKIE_NAME = AUTH_COOKIE_NAME;
 
 export async function POST(request: NextRequest) {
   // Rate limiting
@@ -50,7 +55,7 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: SESSION_MAX_AGE_SECONDS,
       path: "/",
     });
 
@@ -64,4 +69,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-

@@ -3,14 +3,16 @@ import { dentists, adminAudit, reviews } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import ReviewModerationPanel from "@/components/ReviewModerationPanel";
+import { getServerSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
-export const dynamic = 'force-dynamic';
-
-// TODO: Add proper auth check
+export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  // TODO: Check admin session
-  // For now, this is a placeholder
+  const session = await getServerSession();
+  if (!session || session.role !== "admin") {
+    redirect("/admin/login");
+  }
 
   const unverifiedCount = await db
     .select({ count: dentists.id })

@@ -28,8 +28,8 @@ export default function AdminLoginPage() {
         throw new Error(data.error || "Login failed");
       }
 
-      // TODO: Store session/token
       router.push("/admin");
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -87,4 +87,3 @@ export default function AdminLoginPage() {
     </div>
   );
 }
-

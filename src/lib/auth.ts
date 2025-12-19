@@ -3,7 +3,12 @@ import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
-import crypto from "crypto";
+import crypto, { timingSafeEqual } from "crypto";
+
+export const AUTH_COOKIE_NAME = "dentist_session";
+export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
+
+type UserRole = "admin" | "dentist";
 
 export async function hashPassword(password: string): Promise<string> {
   const rounds = parseInt(process.env.BCRYPT_ROUNDS || "10");
@@ -19,7 +24,7 @@ export async function getUserByEmail(email: string) {
   return user || null;
 }
 
-export async function createUser(email: string, password: string, role: "admin" | "dentist" = "dentist") {
+export async function createUser(email: string, password: string, role: UserRole = "dentist") {
   const passwordHash = await hashPassword(password);
   const [user] = await db
     .insert(users)
@@ -32,134 +37,135 @@ export async function createUser(email: string, password: string, role: "admin" 
   return user;
 }
 
-// Simple session management using database-stored sessions
+// Session management using HMAC-signed tokens stored in httpOnly cookies
 export interface Session {
   userId: string;
   email: string;
-  role: "admin" | "dentist";
+  role: UserRole;
 }
 
-const COOKIE_NAME = "dentist_session";
-
-// In-memory session store (for development)
-// In production, use database sessions table
-interface SessionStore {
-  [token: string]: {
-    userId: string;
-    email: string;
-    role: "admin" | "dentist";
-    expiresAt: number;
-  };
+interface SessionPayload {
+  sub: string;
+  email: string;
+  role: UserRole;
+  exp: number; // seconds since epoch
 }
 
-const sessionStore: SessionStore = {};
+function getAuthSecret(): string {
+  const secret = process.env.AUTH_SECRET;
+  if (!secret) {
+    throw new Error("AUTH_SECRET is not set");
+  }
+  return secret;
+}
+
+function encodePayload(payload: SessionPayload): string {
+  return Buffer.from(JSON.stringify(payload)).toString("base64url");
+}
+
+function decodePayload(encoded: string): SessionPayload {
+  return JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as SessionPayload;
+}
+
+function sign(encodedPayload: string): string {
+  return crypto.createHmac("sha256", getAuthSecret()).update(encodedPayload).digest("base64url");
+}
 
 /**
- * Create a session token for a user
+ * Create an HMAC-signed session token
  */
-export function createToken(userId: string, email: string, role: "admin" | "dentist"): string {
-  const token = crypto.randomBytes(32).toString("hex");
-  const expiresAt = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 days
-
-  sessionStore[token] = {
-    userId,
+export function createToken(userId: string, email: string, role: UserRole): string {
+  const payload: SessionPayload = {
+    sub: userId,
     email,
     role,
-    expiresAt,
+    exp: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE_SECONDS,
   };
-
-  // Clean up expired sessions periodically
-  if (Object.keys(sessionStore).length > 1000) {
-    const now = Date.now();
-    Object.keys(sessionStore).forEach((key) => {
-      if (sessionStore[key].expiresAt < now) {
-        delete sessionStore[key];
-      }
-    });
-  }
-
-  return token;
+  const encoded = encodePayload(payload);
+  const signature = sign(encoded);
+  return `${encoded}.${signature}`;
 }
 
 /**
  * Verify a session token
  */
 export function verifyToken(token: string): Session | null {
-  const session = sessionStore[token];
-  if (!session) {
+  try {
+    const [encoded, signature] = token.split(".");
+
+    if (!encoded || !signature) {
+      return null;
+    }
+
+    const expectedSignature = sign(encoded);
+    const provided = Buffer.from(signature);
+    const expected = Buffer.from(expectedSignature);
+
+    if (provided.length !== expected.length || !timingSafeEqual(provided, expected)) {
+      return null;
+    }
+
+    const payload = decodePayload(encoded);
+
+    if (payload.exp * 1000 < Date.now()) {
+      return null;
+    }
+
+    return {
+      userId: payload.sub,
+      email: payload.email,
+      role: payload.role,
+    };
+  } catch (error) {
+    console.error("Failed to verify token", error);
     return null;
   }
-
-  if (session.expiresAt < Date.now()) {
-    delete sessionStore[token];
-    return null;
-  }
-
-  return {
-    userId: session.userId,
-    email: session.email,
-    role: session.role,
-  };
 }
 
 /**
- * Delete a session token
- */
-export function deleteToken(token: string): void {
-  delete sessionStore[token];
-}
-
-/**
- * Get session from request (checks cookies)
+ * Get session from request (checks cookies first, then Authorization header)
  */
 export async function getServerSession(request?: Request): Promise<Session | null> {
   try {
-    // Try to get from Next.js cookies (for server components)
-    const cookieStore = await cookies();
-    const token = cookieStore.get(COOKIE_NAME)?.value;
+    const cookieStore = cookies();
+    const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
 
     if (token) {
-      return verifyToken(token);
+      const session = verifyToken(token);
+      if (session) return session;
     }
 
-    // Fallback: try to get from request headers (for API routes)
     if (request) {
       const authHeader = request.headers.get("authorization");
       if (authHeader?.startsWith("Bearer ")) {
-        const token = authHeader.substring(7);
-        return verifyToken(token);
+        const bearerToken = authHeader.substring(7);
+        const session = verifyToken(bearerToken);
+        if (session) return session;
       }
 
-      // Also check cookies from request
       const cookieHeader = request.headers.get("cookie");
       if (cookieHeader) {
-        const cookies = Object.fromEntries(
+        const parsedCookies = Object.fromEntries(
           cookieHeader.split("; ").map((c) => c.split("="))
         );
-        const token = cookies[COOKIE_NAME];
-        if (token) {
-          return verifyToken(token);
+        const headerToken = parsedCookies[AUTH_COOKIE_NAME];
+        if (headerToken) {
+          const session = verifyToken(headerToken);
+          if (session) return session;
         }
       }
     }
 
     return null;
-  } catch {
+  } catch (error) {
+    console.error("Error getting server session", error);
     return null;
   }
 }
 
 /**
- * Set session cookie
+ * Delete a session token (stateless tokens are revoked by clearing the cookie)
  */
-export function setSessionCookie(token: string): void {
-  // This will be called from API routes using NextResponse
+export function deleteToken(): void {
+  // Stateless token – clearing the cookie removes access
 }
-
-/**
- * Clear session cookie
- */
-export function clearSessionCookie(): void {
-  // This will be called from logout API route
-}
-

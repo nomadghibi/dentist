@@ -1,39 +1,44 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
-export default function DentistLoginPage() {
+export default function DentistSignupPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
     setError("");
 
+    if (password !== confirmPassword) {
+      setError("Passwords must match");
+      return;
+    }
+
+    setIsSubmitting(true);
+
     try {
-      const response = await fetch("/api/dentist/login", {
+      const response = await fetch("/api/dentist/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error || "Login failed");
+        throw new Error(data.error || "Sign up failed");
       }
 
-      // Redirect to dashboard
       router.push("/dentist/dashboard");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : "Sign up failed");
     } finally {
       setIsSubmitting(false);
     }
@@ -42,12 +47,10 @@ export default function DentistLoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900">
-            Secure Dentist Login
-          </h2>
-          <p className="mt-2 text-center text-sm text-slate-600">
-            Access your dashboard with protected, HTTP-only sessions
+        <div className="text-center">
+          <h2 className="mt-6 text-3xl font-extrabold text-slate-900">Secure Dentist Sign Up</h2>
+          <p className="mt-2 text-sm text-slate-600">
+            Create your account to access the dentist dashboard with protected, HTTP-only sessions.
           </p>
         </div>
         <form className="mt-8 space-y-6 bg-white rounded-2xl shadow-lg p-8" onSubmit={handleSubmit}>
@@ -71,7 +74,7 @@ export default function DentistLoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="appearance-none relative block w-full px-4 py-3 border border-slate-300 placeholder-slate-500 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="your@email.com"
+                placeholder="dentist@email.com"
               />
             </div>
             <div>
@@ -82,12 +85,30 @@ export default function DentistLoginPage() {
                 id="password"
                 name="password"
                 type="password"
-                autoComplete="current-password"
+                autoComplete="new-password"
+                minLength={8}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="appearance-none relative block w-full px-4 py-3 border border-slate-300 placeholder-slate-500 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="••••••••"
+                placeholder="At least 8 characters"
+              />
+            </div>
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-700 mb-1">
+                Confirm password
+              </label>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="appearance-none relative block w-full px-4 py-3 border border-slate-300 placeholder-slate-500 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Re-enter your password"
               />
             </div>
           </div>
@@ -98,19 +119,15 @@ export default function DentistLoginPage() {
               disabled={isSubmitting}
               className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
             >
-              {isSubmitting ? "Signing in..." : "Sign in"}
+              {isSubmitting ? "Creating account..." : "Sign up securely"}
             </button>
           </div>
 
           <div className="text-center">
             <p className="text-sm text-slate-600">
-              Don't have an account?{" "}
-              <Link href="/dentist/signup" className="font-medium text-blue-600 hover:text-blue-500">
-                Create one
-              </Link>{" "}
-              or{" "}
-              <Link href="/claim" className="font-medium text-blue-600 hover:text-blue-500">
-                claim your profile
+              Already have an account?{" "}
+              <Link href="/dentist/login" className="font-medium text-blue-600 hover:text-blue-500">
+                Log in
               </Link>
             </p>
           </div>

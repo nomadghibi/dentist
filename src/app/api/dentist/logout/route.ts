@@ -1,17 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
-import { deleteToken } from "@/lib/auth";
+import { NextResponse } from "next/server";
+import { AUTH_COOKIE_NAME } from "@/lib/auth";
 
-const COOKIE_NAME = "dentist_session";
-
-export async function POST(request: NextRequest) {
-  const token = request.cookies.get(COOKIE_NAME)?.value;
-  
-  if (token) {
-    deleteToken(token);
-  }
-
+export async function POST() {
   const response = NextResponse.json({ success: true });
-  response.cookies.delete(COOKIE_NAME);
+  response.cookies.set(AUTH_COOKIE_NAME, "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 0,
+    path: "/",
+  });
   return response;
 }
-

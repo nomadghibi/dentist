@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { dentists, subscriptions } from "@/db/schema";
 import { eq, and, or } from "drizzle-orm";
-import { buildCityHubMetadata, buildCanonical } from "@/lib/seo";
+import { buildBreadcrumbJsonLd, buildCityHubMetadata, buildCanonical } from "@/lib/seo";
 import { validateCitySlug } from "@/lib/slug";
 import { sortDentists, injectFeatured, type RankingQuery } from "@/lib/ranking";
 import DentistCard from "@/components/DentistCard";
@@ -182,24 +182,10 @@ export default async function CityDentistsPage({ params, searchParams }: PagePro
     })),
   };
 
-  const breadcrumbsJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Florida",
-        item: buildCanonical("/fl"),
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: `${cityName} Dentists`,
-        item: buildCanonical(`/fl/${city}/dentists`),
-      },
-    ],
-  };
+  const breadcrumbsJsonLd = buildBreadcrumbJsonLd([
+    { name: "Florida", path: "/fl" },
+    { name: `${cityName} Dentists`, path: `/fl/${city}/dentists` },
+  ]);
 
   return (
     <div className="min-h-screen">

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { dentists, subscriptions } from "@/db/schema";
 import { eq, and, or } from "drizzle-orm";
-import { buildServicePageMetadata, buildCanonical } from "@/lib/seo";
+import { buildBreadcrumbJsonLd, buildServicePageMetadata, buildCanonical } from "@/lib/seo";
 import { validateCitySlug, validateServiceSlug } from "@/lib/slug";
 import { sortDentists, injectFeatured, type RankingQuery } from "@/lib/ranking";
 import DentistCard from "@/components/DentistCard";
@@ -106,30 +106,11 @@ export default async function ServicePage({ params, searchParams }: PageProps) {
     })),
   };
 
-  const breadcrumbsJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Florida",
-        item: buildCanonical("/fl"),
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: `${cityName} Dentists`,
-        item: buildCanonical(`/fl/${city}/dentists`),
-      },
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: serviceName,
-        item: buildCanonical(`/fl/${city}/${service}`),
-      },
-    ],
-  };
+  const breadcrumbsJsonLd = buildBreadcrumbJsonLd([
+    { name: "Florida", path: "/fl" },
+    { name: `${cityName} Dentists`, path: `/fl/${city}/dentists` },
+    { name: serviceName, path: `/fl/${city}/${service}` },
+  ]);
 
   return (
     <div className="min-h-screen bg-gray-50">

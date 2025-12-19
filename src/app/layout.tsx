@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Link from "next/link";
+import { buildMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildMetadata({
   title: "Dentist Finder - Find Trusted Dentists in Florida",
-  description: "Find trusted dentists in Palm Bay, Melbourne, and Space Coast, Florida. Compare services, insurance accepted, and verified practices.",
-};
+  description:
+    "Find trusted dentists in Palm Bay, Melbourne, and Space Coast, Florida. Compare services, insurance accepted, and verified practices.",
+  path: "/",
+});
 
 export default function RootLayout({
   children,
@@ -95,4 +98,3 @@ export default function RootLayout({
     </html>
   );
 }
-

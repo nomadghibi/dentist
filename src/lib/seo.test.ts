@@ -5,6 +5,9 @@ import {
   buildServicePageMetadata,
   buildDentistProfileMetadata,
   buildDentistJsonLd,
+  buildFaqJsonLd,
+  buildBreadcrumbJsonLd,
+  buildLocalBusinessJsonLd,
 } from "./seo";
 
 describe("buildCanonical", () => {
@@ -69,7 +72,7 @@ describe("buildDentistJsonLd", () => {
     });
 
     expect(jsonLd["@context"]).toBe("https://schema.org");
-    expect(jsonLd["@type"]).toBe("Dentist");
+    expect(jsonLd["@type"]).toContain("Dentist");
     expect(jsonLd.name).toBe("Dr. Smith");
     expect(jsonLd.geo).toBeDefined();
   });
@@ -87,3 +90,37 @@ describe("buildDentistJsonLd", () => {
   });
 });
 
+describe("structured data helpers", () => {
+  it("builds FAQ JSON-LD", () => {
+    const faq = buildFaqJsonLd([
+      { question: "How do I book?", answer: "Use the request button on a profile." },
+      { question: "Is it free?", answer: "Patient browsing is free." },
+    ]);
+
+    expect(faq["@type"]).toBe("FAQPage");
+    expect(Array.isArray((faq as any).mainEntity)).toBe(true);
+    expect((faq as any).mainEntity[0].name).toContain("How do I book");
+  });
+
+  it("builds breadcrumbs JSON-LD", () => {
+    const breadcrumbs = buildBreadcrumbJsonLd([
+      { name: "Florida", path: "/fl" },
+      { name: "Palm Bay Dentists", path: "/fl/palm-bay/dentists" },
+    ]);
+
+    expect(breadcrumbs["@type"]).toBe("BreadcrumbList");
+    expect((breadcrumbs as any).itemListElement[1].item).toContain("/fl/palm-bay/dentists");
+  });
+
+  it("builds LocalBusiness JSON-LD", () => {
+    const jsonLd = buildLocalBusinessJsonLd({
+      name: "Dentist Finder",
+      serviceArea: "Florida",
+      url: "https://dentistfinder.com",
+      phone: "555-1234",
+    });
+
+    expect(jsonLd["@type"]).toContain("LocalBusiness");
+    expect((jsonLd as any).areaServed.name).toBe("Florida");
+  });
+});

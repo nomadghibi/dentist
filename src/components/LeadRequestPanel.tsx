@@ -24,6 +24,10 @@ export default function LeadRequestPanel({ dentistId, sourceUrl }: LeadRequestPa
           <p className="text-sm text-slate-600">
             We send your request straight to the practice. No payment required.
           </p>
+          <ul className="mt-2 text-xs text-slate-500 space-y-1 list-disc list-inside">
+            <li>Opt into reminders so we can nudge the office before your visit.</li>
+            <li>Join the waitlist for earlier openings in case a slot frees up.</li>
+          </ul>
         </div>
         <div className="hidden sm:block text-right">
           <span className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-100">

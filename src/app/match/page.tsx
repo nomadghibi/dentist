@@ -1,10 +1,12 @@
-import { Metadata } from "next";
 import MatchQuiz from "@/components/MatchQuiz";
+import { buildMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = buildMetadata({
   title: "Find Your Perfect Dentist Match | Dentist Finder",
-  description: "Answer a few questions to get personalized dentist recommendations in Palm Bay, Melbourne, and Space Coast, Florida.",
-};
+  description:
+    "Answer a few questions to get personalized dentist recommendations in Palm Bay, Melbourne, and Space Coast, Florida.",
+  path: "/match",
+});
 
 export default function MatchPage() {
   return (
@@ -24,4 +26,3 @@ export default function MatchPage() {
     </div>
   );
 }
-

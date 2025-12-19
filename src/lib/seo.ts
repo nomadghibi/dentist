@@ -4,8 +4,8 @@ export interface SEOConfig {
   title: string;
   description: string;
   canonical?: string;
+  path?: string;
   noindex?: boolean;
-  jsonLd?: Record<string, unknown>;
 }
 
 const SITE_NAME = "Dentist Finder";
@@ -13,11 +13,16 @@ const DEFAULT_DESCRIPTION = "Find trusted dentists in Florida. Compare services,
 
 export function buildCanonical(path: string): string {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://dentistfinder.com";
-  return `${baseUrl}${path}`;
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    return path;
+  }
+
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${baseUrl}${normalizedPath}`;
 }
 
 export function buildMetadata(config: SEOConfig): Metadata {
-  const canonical = config.canonical || buildCanonical("");
+  const canonical = config.canonical || (config.path ? buildCanonical(config.path) : buildCanonical("/"));
   
   return {
     title: `${config.title} | ${SITE_NAME}`,
@@ -37,6 +42,87 @@ export function buildMetadata(config: SEOConfig): Metadata {
       type: "website",
     },
   };
+}
+
+export function buildBreadcrumbJsonLd(crumbs: Array<{ name: string; path: string }>): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: crumbs.map((crumb, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: crumb.name,
+      item: buildCanonical(crumb.path),
+    })),
+  };
+}
+
+export function buildFaqJsonLd(faqs: Array<{ question: string; answer: string }>): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer,
+      },
+    })),
+  };
+}
+
+export function buildLocalBusinessJsonLd(business: {
+  name: string;
+  description?: string;
+  url?: string;
+  phone?: string | null;
+  address?: {
+    street?: string | null;
+    city?: string;
+    region?: string;
+    postalCode?: string;
+    country?: string;
+  };
+  serviceArea?: string;
+  sameAs?: string[];
+  image?: string;
+  priceRange?: string;
+}): Record<string, unknown> {
+  const jsonLd: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": ["LocalBusiness", "Dentist"],
+    name: business.name,
+    ...(business.description && { description: business.description }),
+    ...(business.url && { url: business.url }),
+    ...(business.phone && { telephone: business.phone }),
+    ...(business.priceRange && { priceRange: business.priceRange }),
+    ...(business.image && { image: business.image }),
+  };
+
+  if (business.address) {
+    jsonLd.address = {
+      "@type": "PostalAddress",
+      ...(business.address.street && { streetAddress: business.address.street }),
+      ...(business.address.city && { addressLocality: business.address.city }),
+      ...(business.address.region && { addressRegion: business.address.region }),
+      ...(business.address.postalCode && { postalCode: business.address.postalCode }),
+      addressCountry: business.address.country || "US",
+    };
+  }
+
+  if (business.serviceArea) {
+    jsonLd.areaServed = {
+      "@type": "AdministrativeArea",
+      name: business.serviceArea,
+    };
+  }
+
+  if (business.sameAs && business.sameAs.length > 0) {
+    jsonLd.sameAs = business.sameAs;
+  }
+
+  return jsonLd;
 }
 
 export function buildCityHubMetadata(cityName: string, citySlug: string): Metadata {
@@ -96,10 +182,16 @@ export function buildDentistJsonLd(dentist: {
   acceptingNewPatients?: boolean | null;
   averageRating?: number | null;
   reviewCount?: number | null;
+  slug?: string;
+  citySlug?: string;
 }): Record<string, unknown> {
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
-    "@type": "Dentist",
+    "@type": ["LocalBusiness", "Dentist"],
+    ...(dentist.slug && dentist.citySlug && {
+      "@id": `${buildCanonical(`/fl/${dentist.citySlug}/dentists/${dentist.slug}`)}#practice`,
+      url: buildCanonical(`/fl/${dentist.citySlug}/dentists/${dentist.slug}`),
+    }),
     name: dentist.name,
     address: {
       "@type": "PostalAddress",
@@ -109,7 +201,7 @@ export function buildDentistJsonLd(dentist: {
       ...(dentist.address && { streetAddress: dentist.address }),
     },
     ...(dentist.phone && { telephone: dentist.phone }),
-    ...(dentist.website && { url: dentist.website }),
+    ...(dentist.website && { sameAs: [dentist.website] }),
   };
 
   if (dentist.lat && dentist.lng) {

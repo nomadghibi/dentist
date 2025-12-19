@@ -1,9 +1,10 @@
-import { Metadata } from "next";
+import { buildMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = buildMetadata({
   title: "Terms of Service - Dentist Finder",
   description: "Terms of service for Dentist Finder platform.",
-};
+  path: "/terms",
+});
 
 export default function TermsPage() {
   return (
@@ -35,4 +36,3 @@ export default function TermsPage() {
     </div>
   );
 }
-

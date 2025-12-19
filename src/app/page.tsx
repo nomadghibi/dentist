@@ -2,7 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { db } from "@/db";
 import { dentists } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
+import { buildCanonical, buildFaqJsonLd, buildLocalBusinessJsonLd } from "@/lib/seo";
 
 export const dynamic = 'force-dynamic';
 
@@ -23,8 +24,38 @@ async function getCityDentistCounts() {
 
 export default async function HomePage() {
   const cityCounts = await getCityDentistCounts();
+
+  const businessJsonLd = buildLocalBusinessJsonLd({
+    name: "Dentist Finder",
+    description: "Verified directory of dentists serving Palm Bay, Melbourne, and the Space Coast.",
+    url: buildCanonical("/"),
+    serviceArea: "Florida",
+    priceRange: "$$",
+  });
+
+  const faqJsonLd = buildFaqJsonLd([
+    {
+      question: "How does Dentist Finder vet dental practices?",
+      answer:
+        "We verify Florida licensing, highlight verified practices, and surface availability, insurance, and emergency readiness so you can book with confidence.",
+    },
+    {
+      question: "Can I request an appointment online?",
+      answer:
+        "Yes. Submit a request from any dentist profile and we notify the practice with your preferred contact details.",
+    },
+    {
+      question: "Which cities are covered?",
+      answer: "Palm Bay, Melbourne, and the Space Coast with more Florida markets coming soon.",
+    },
+  ]);
+
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify([businessJsonLd, faqJsonLd]) }}
+      />
       {/* Hero Section */}
       <section className="relative overflow-hidden min-h-[800px] flex items-center">
         {/* Background Image */}
@@ -287,4 +318,3 @@ export default async function HomePage() {
     </div>
   );
 }
-

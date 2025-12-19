@@ -1,15 +1,55 @@
-import { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
+import {
+  buildBreadcrumbJsonLd,
+  buildCanonical,
+  buildFaqJsonLd,
+  buildLocalBusinessJsonLd,
+  buildMetadata,
+} from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = buildMetadata({
   title: "For Dentists - Grow Your Practice | Dentist Finder",
-  description: "Claim your profile, get featured placement, and generate more leads. Pricing, features, and everything you need to know.",
-};
+  description:
+    "Claim your profile, get featured placement, and generate more leads. Pricing, features, and everything you need to know.",
+  path: "/for-dentists",
+});
 
 export default function ForDentistsPage() {
+  const faqJsonLd = buildFaqJsonLd([
+    {
+      question: "How do I claim my dental profile?",
+      answer: "Search for your practice, click “Claim Your Profile,” and verify with your work email to unlock editing.",
+    },
+    {
+      question: "What do the paid plans include?",
+      answer:
+        "Pro and Premium plans unlock featured placement, real-time lead routing, and analytics on views and conversions.",
+    },
+    {
+      question: "Can I update availability and pricing?",
+      answer: "Yes. You can keep emergency, weekend, and pricing details current so patients book with confidence.",
+    },
+  ]);
+
+  const breadcrumbsJsonLd = buildBreadcrumbJsonLd([
+    { name: "Home", path: "/" },
+    { name: "For Dentists", path: "/for-dentists" },
+  ]);
+
+  const businessJsonLd = buildLocalBusinessJsonLd({
+    name: "Dentist Finder for Practices",
+    description: "Lead generation, verification, and analytics platform for Florida dental offices.",
+    url: buildCanonical("/for-dentists"),
+    serviceArea: "Florida",
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify([businessJsonLd, faqJsonLd, breadcrumbsJsonLd]) }}
+      />
       {/* Hero Section */}
       <section className="relative overflow-hidden min-h-[800px] flex items-center">
         {/* Background Image */}

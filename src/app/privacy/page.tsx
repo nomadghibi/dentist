@@ -1,9 +1,10 @@
-import { Metadata } from "next";
+import { buildMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = buildMetadata({
   title: "Privacy Policy - Dentist Finder",
   description: "Privacy policy for Dentist Finder platform.",
-};
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   return (
@@ -37,4 +38,3 @@ export default function PrivacyPage() {
     </div>
   );
 }
-

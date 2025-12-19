@@ -1,10 +1,11 @@
-import { Metadata } from "next";
 import Link from "next/link";
+import { buildMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata = buildMetadata({
   title: "Pricing - Dentist Finder",
   description: "Choose a subscription plan to get featured placement and lead generation tools.",
-};
+  path: "/pricing",
+});
 
 export default function PricingPage() {
   return (
@@ -74,4 +75,3 @@ export default function PricingPage() {
     </div>
   );
 }
-

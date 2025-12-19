@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { dentists, reviews, subscriptions } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
-import { buildDentistProfileMetadata, buildDentistJsonLd, buildCanonical } from "@/lib/seo";
+import { buildBreadcrumbJsonLd, buildDentistProfileMetadata, buildDentistJsonLd, buildCanonical } from "@/lib/seo";
 import { validateCitySlug } from "@/lib/slug";
 import ProfileViewTracker from "@/components/ProfileViewTracker";
 import ClickTracker from "@/components/ClickTracker";
@@ -70,30 +70,11 @@ export default async function DentistProfilePage({ params }: PageProps) {
     (subscription.plan === "pro" || subscription.plan === "premium");
 
   const jsonLd = buildDentistJsonLd(dentist);
-  const breadcrumbJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Florida",
-        item: buildCanonical("/fl"),
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: `${dentist.cityName} Dentists`,
-        item: buildCanonical(`/fl/${city}/dentists`),
-      },
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: dentist.name,
-        item: buildCanonical(`/fl/${city}/dentists/${slug}`),
-      },
-    ],
-  };
+  const breadcrumbJsonLd = buildBreadcrumbJsonLd([
+    { name: "Florida", path: "/fl" },
+    { name: `${dentist.cityName} Dentists`, path: `/fl/${city}/dentists` },
+    { name: dentist.name, path: `/fl/${city}/dentists/${slug}` },
+  ]);
 
   return (
     <>

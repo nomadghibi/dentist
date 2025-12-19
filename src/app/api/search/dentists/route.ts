@@ -5,12 +5,19 @@ import { eq, and, or, ilike } from "drizzle-orm";
 import { z } from "zod";
 import { sortDentists, injectFeatured, type RankingQuery } from "@/lib/ranking";
 import { validateCitySlug, validateServiceSlug } from "@/lib/slug";
+import { CITY_COORDINATES, haversineDistanceMiles, parseCoordinates } from "@/lib/geo";
 
 const searchSchema = z.object({
   city: z.string(),
   service: z.string().optional(),
   verified: z.enum(["true", "false"]).optional(),
   q: z.string().optional(),
+  insurance: z.string().optional(),
+  acceptingNewPatients: z.enum(["true", "false"]).optional(),
+  sameWeek: z.enum(["true", "false"]).optional(),
+  weekend: z.enum(["true", "false"]).optional(),
+  emergencyToday: z.enum(["true", "false"]).optional(),
+  radius: z.string().optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -21,6 +28,12 @@ export async function GET(request: NextRequest) {
       service: searchParams.get("service") || undefined,
       verified: searchParams.get("verified") as "true" | "false" | undefined,
       q: searchParams.get("q") || undefined,
+      insurance: searchParams.get("insurance") || undefined,
+      acceptingNewPatients: searchParams.get("acceptingNewPatients") as "true" | "false" | undefined,
+      sameWeek: searchParams.get("sameWeek") as "true" | "false" | undefined,
+      weekend: searchParams.get("weekend") as "true" | "false" | undefined,
+      emergencyToday: searchParams.get("emergencyToday") as "true" | "false" | undefined,
+      radius: searchParams.get("radius") || undefined,
     };
 
     const validated = searchSchema.parse(params);
@@ -40,6 +53,32 @@ export async function GET(request: NextRequest) {
     }
     if (validated.verified === "true") {
       query.verifiedOnly = true;
+    }
+    if (validated.insurance) {
+      query.insurance = validated.insurance;
+    }
+    if (validated.acceptingNewPatients === "true") {
+      query.acceptingNewPatients = true;
+    }
+    if (validated.sameWeek === "true") {
+      query.sameWeek = true;
+    }
+    if (validated.weekend === "true") {
+      query.weekend = true;
+    }
+    if (validated.emergencyToday === "true") {
+      query.emergencyToday = true;
+    }
+    if (validated.radius) {
+      const parsed = Number.parseInt(validated.radius, 10);
+      if (Number.isFinite(parsed)) {
+        query.radiusMiles = parsed;
+      }
+    }
+
+    const originCoords = CITY_COORDINATES[validated.city];
+    if (originCoords) {
+      query.originCoords = originCoords;
     }
 
     // Fetch dentists
@@ -67,6 +106,45 @@ export async function GET(request: NextRequest) {
           return d.servicesFlags?.[serviceKey as keyof typeof d.servicesFlags] === true;
         });
       }
+    }
+
+    // Apply insurance filter
+    if (validated.insurance) {
+      const normalized = validated.insurance.trim().toLowerCase();
+      cityDentists = cityDentists.filter((d) =>
+        d.insurances?.some((plan) => plan && plan.trim().toLowerCase() === normalized)
+      );
+    }
+
+    // Availability filters
+    if (validated.acceptingNewPatients === "true") {
+      cityDentists = cityDentists.filter((d) => d.acceptingNewPatients === true);
+    }
+    if (validated.sameWeek === "true") {
+      cityDentists = cityDentists.filter((d) => d.availabilityFlags?.same_week === true);
+    }
+    if (validated.weekend === "true") {
+      cityDentists = cityDentists.filter((d) => d.availabilityFlags?.weekend === true);
+    }
+    if (validated.emergencyToday === "true") {
+      cityDentists = cityDentists.filter((d) => d.availabilityFlags?.emergency_today === true);
+    }
+
+    if (query.radiusMiles && originCoords) {
+      cityDentists = cityDentists
+        .map((d) => {
+          const coords = parseCoordinates(d.lat, d.lng);
+          if (!coords) return { dentist: d, distance: undefined };
+          return {
+            dentist: d,
+            distance: haversineDistanceMiles(originCoords, coords),
+          };
+        })
+        .filter((item) => item.distance !== undefined && item.distance <= query.radiusMiles)
+        .map((item) => ({
+          ...item.dentist,
+          distanceMiles: item.distance,
+        }));
     }
 
     // Sort
@@ -100,6 +178,11 @@ export async function GET(request: NextRequest) {
         phone: d.phone,
         verifiedStatus: d.verifiedStatus,
         isSponsored: d.isSponsored,
+        lat: d.lat,
+        lng: d.lng,
+        insurances: d.insurances,
+        availabilityFlags: d.availabilityFlags,
+        distanceMiles: d.distanceMiles,
       })),
       count: finalList.length,
     });
@@ -112,4 +195,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-

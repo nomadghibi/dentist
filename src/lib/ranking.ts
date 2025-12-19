@@ -1,7 +1,9 @@
 import type { InferSelectModel } from "drizzle-orm";
 import type { dentists } from "@/db/schema";
+import { haversineDistanceMiles, parseCoordinates } from "./geo";
 
 export type Dentist = InferSelectModel<typeof dentists>;
+export type DentistWithMeta = Dentist & { distanceMiles?: number };
 
 export interface RankingQuery {
   service?: string;
@@ -11,6 +13,9 @@ export interface RankingQuery {
   sameWeek?: boolean;
   emergencyToday?: boolean;
   weekend?: boolean;
+  insurance?: string;
+  radiusMiles?: number;
+  originCoords?: { lat: number; lng: number };
 }
 
 export interface FeaturedConfig {
@@ -81,6 +86,42 @@ export function organicScore(dentist: Dentist, query?: RankingQuery): number {
     }
   }
 
+  // Insurance match bonus (15 points)
+  if (query?.insurance && dentist.insurances?.length) {
+    const normalizedInsurance = query.insurance.trim().toLowerCase();
+    const match = dentist.insurances.some(
+      (plan) => plan && plan.trim().toLowerCase() === normalizedInsurance
+    );
+    if (match) {
+      score += 15;
+    }
+  }
+
+  // Availability signals (10 points each)
+  if (query?.acceptingNewPatients && dentist.acceptingNewPatients) {
+    score += 10;
+  }
+  if (query?.sameWeek && dentist.availabilityFlags?.same_week) {
+    score += 10;
+  }
+  if (query?.emergencyToday && dentist.availabilityFlags?.emergency_today) {
+    score += 10;
+  }
+  if (query?.weekend && dentist.availabilityFlags?.weekend) {
+    score += 10;
+  }
+
+  // Distance bonus (up to 20 points, closer is better)
+  if (query?.radiusMiles && query.originCoords && dentist.lat && dentist.lng) {
+    const coords = parseCoordinates(dentist.lat, dentist.lng);
+    if (coords) {
+      const distance = haversineDistanceMiles(query.originCoords, coords);
+      const clampedDistance = Math.min(distance, query.radiusMiles);
+      const distanceScore = Math.max(0, (1 - clampedDistance / query.radiusMiles) * 20);
+      score += distanceScore;
+    }
+  }
+
   return score;
 }
 
@@ -88,7 +129,7 @@ export function organicScore(dentist: Dentist, query?: RankingQuery): number {
  * Sort dentists by organic score (descending)
  * Tie-breaker: verified status, then completeness, then name
  */
-export function sortDentists(dentists: Dentist[], query?: RankingQuery): Dentist[] {
+export function sortDentists(dentists: DentistWithMeta[], query?: RankingQuery): DentistWithMeta[] {
   return [...dentists].sort((a, b) => {
     const scoreA = organicScore(a, query);
     const scoreB = organicScore(b, query);
@@ -115,7 +156,7 @@ export function sortDentists(dentists: Dentist[], query?: RankingQuery): Dentist
   });
 }
 
-export interface DentistWithFeatured extends Dentist {
+export interface DentistWithFeatured extends DentistWithMeta {
   isSponsored?: boolean;
 }
 
@@ -124,8 +165,8 @@ export interface DentistWithFeatured extends Dentist {
  * Featured dentists must have active pro/premium subscription
  */
 export function injectFeatured(
-  sortedDentists: Dentist[],
-  featuredDentists: Dentist[],
+  sortedDentists: DentistWithMeta[],
+  featuredDentists: DentistWithMeta[],
   config: FeaturedConfig
 ): DentistWithFeatured[] {
   const result: DentistWithFeatured[] = [];
@@ -187,4 +228,3 @@ export function injectFeatured(
 
   return result;
 }
-

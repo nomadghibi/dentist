@@ -1,8 +1,8 @@
 import Link from "next/link";
-import type { Dentist } from "@/lib/ranking";
+import type { DentistWithMeta } from "@/lib/ranking";
 
 interface DentistCardProps {
-  dentist: Dentist & { isSponsored?: boolean };
+  dentist: DentistWithMeta & { isSponsored?: boolean };
   city: string;
   isSponsored?: boolean;
 }
@@ -41,10 +41,17 @@ export default function DentistCard({ dentist, city, isSponsored }: DentistCardP
         </div>
       </div>
 
-      {dentist.address && (
-        <div className="flex items-start gap-2 mb-4 text-slate-600">
-          <span className="text-slate-400">📍</span>
-          <p className="text-sm">{dentist.address}</p>
+      {(dentist.address || dentist.distanceMiles !== undefined) && (
+        <div className="flex items-start gap-3 mb-4 text-slate-600">
+          <span className="text-slate-400 mt-0.5">📍</span>
+          <div className="text-sm space-y-1">
+            {dentist.address && <p>{dentist.address}</p>}
+            {dentist.distanceMiles !== undefined && (
+              <p className="text-slate-500">
+                {dentist.distanceMiles.toFixed(1)} miles away
+              </p>
+            )}
+          </div>
         </div>
       )}
 
@@ -64,7 +71,48 @@ export default function DentistCard({ dentist, city, isSponsored }: DentistCardP
             🦷 Invisalign
           </span>
         )}
+        {dentist.acceptingNewPatients && (
+          <span className="px-3 py-1.5 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg border border-emerald-200">
+            ✅ Accepting new patients
+          </span>
+        )}
+        {dentist.availabilityFlags?.same_week && (
+          <span className="px-3 py-1.5 bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-lg border border-indigo-200">
+            📅 Same-week
+          </span>
+        )}
+        {dentist.availabilityFlags?.weekend && (
+          <span className="px-3 py-1.5 bg-purple-100 text-purple-700 text-xs font-semibold rounded-lg border border-purple-200">
+            🗓️ Weekend
+          </span>
+        )}
+        {dentist.availabilityFlags?.emergency_today && (
+          <span className="px-3 py-1.5 bg-rose-100 text-rose-700 text-xs font-semibold rounded-lg border border-rose-200">
+            ⚡ Emergency today
+          </span>
+        )}
       </div>
+
+      {dentist.insurances?.length ? (
+        <div className="mb-4">
+          <p className="text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wide">Insurance</p>
+          <div className="flex flex-wrap gap-2">
+            {dentist.insurances.slice(0, 3).map((plan) => (
+              <span
+                key={plan}
+                className="px-3 py-1 bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200"
+              >
+                {plan}
+              </span>
+            ))}
+            {dentist.insurances.length > 3 && (
+              <span className="px-2 py-1 text-xs text-slate-500">
+                +{dentist.insurances.length - 3} more
+              </span>
+            )}
+          </div>
+        </div>
+      ) : null}
 
       <div className="flex items-center justify-between pt-4 border-t border-slate-200">
         <div className="text-sm">
@@ -87,4 +135,3 @@ export default function DentistCard({ dentist, city, isSponsored }: DentistCardP
     </div>
   );
 }
-

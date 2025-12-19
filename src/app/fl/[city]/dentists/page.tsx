@@ -2,12 +2,16 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { dentists, subscriptions } from "@/db/schema";
-import { eq, and, or, sql } from "drizzle-orm";
-import { buildCityHubMetadata, buildCanonical } from "@/lib/seo";
+import { eq, and, or } from "drizzle-orm";
+import { buildCityHubMetadata } from "@/lib/seo";
 import { validateCitySlug } from "@/lib/slug";
 import { sortDentists, injectFeatured, type RankingQuery } from "@/lib/ranking";
 import DentistCard from "@/components/DentistCard";
 import Filters from "@/components/Filters";
+import dynamic from "next/dynamic";
+import { CITY_COORDINATES, haversineDistanceMiles, parseCoordinates } from "@/lib/geo";
+
+const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 
 const CITY_NAMES: Record<string, string> = {
   "palm-bay": "Palm Bay",
@@ -47,6 +51,32 @@ export default async function CityDentistsPage({ params, searchParams }: PagePro
   if (search.verified === "true") {
     query.verifiedOnly = true;
   }
+  if (search.insurance) {
+    query.insurance = String(search.insurance);
+  }
+  if (search.acceptingNewPatients === "true") {
+    query.acceptingNewPatients = true;
+  }
+  if (search.sameWeek === "true") {
+    query.sameWeek = true;
+  }
+  if (search.weekend === "true") {
+    query.weekend = true;
+  }
+  if (search.emergencyToday === "true") {
+    query.emergencyToday = true;
+  }
+  if (search.radius) {
+    const parsed = Number.parseInt(String(search.radius), 10);
+    if (Number.isFinite(parsed)) {
+      query.radiusMiles = parsed;
+    }
+  }
+
+  const originCoords = CITY_COORDINATES[city];
+  if (originCoords) {
+    query.originCoords = originCoords;
+  }
 
   // Fetch dentists for this city
   let cityDentists = await db
@@ -72,6 +102,46 @@ export default async function CityDentistsPage({ params, searchParams }: PagePro
         return d.servicesFlags?.[serviceKey as keyof typeof d.servicesFlags] === true;
       });
     }
+  }
+
+  // Apply insurance filter
+  if (query.insurance) {
+    const normalizedInsurance = query.insurance.trim().toLowerCase();
+    cityDentists = cityDentists.filter((d) =>
+      d.insurances?.some((plan) => plan && plan.trim().toLowerCase() === normalizedInsurance)
+    );
+  }
+
+  // Apply availability filters
+  if (query.acceptingNewPatients) {
+    cityDentists = cityDentists.filter((d) => d.acceptingNewPatients === true);
+  }
+  if (query.sameWeek) {
+    cityDentists = cityDentists.filter((d) => d.availabilityFlags?.same_week === true);
+  }
+  if (query.weekend) {
+    cityDentists = cityDentists.filter((d) => d.availabilityFlags?.weekend === true);
+  }
+  if (query.emergencyToday) {
+    cityDentists = cityDentists.filter((d) => d.availabilityFlags?.emergency_today === true);
+  }
+
+  // Apply distance filter
+  if (query.radiusMiles && originCoords) {
+    cityDentists = cityDentists
+      .map((d) => {
+        const coords = parseCoordinates(d.lat, d.lng);
+        if (!coords) return { dentist: d, distance: undefined };
+        return {
+          dentist: d,
+          distance: haversineDistanceMiles(originCoords, coords),
+        };
+      })
+      .filter((item) => item.distance !== undefined && item.distance <= query.radiusMiles)
+      .map((item) => ({
+        ...item.dentist,
+        distanceMiles: item.distance,
+      }));
   }
 
   // Sort organically
@@ -121,32 +191,58 @@ export default async function CityDentistsPage({ params, searchParams }: PagePro
 
       {/* Content Section */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
-        <Filters city={city} currentService={query.service} verifiedOnly={query.verifiedOnly} />
+        <Filters
+          city={city}
+          currentService={query.service}
+          verifiedOnly={query.verifiedOnly}
+          currentInsurance={query.insurance}
+          availability={{
+            acceptingNewPatients: query.acceptingNewPatients,
+            sameWeek: query.sameWeek,
+            weekend: query.weekend,
+            emergencyToday: query.emergencyToday,
+          }}
+          radiusMiles={query.radiusMiles}
+        />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {finalList.length === 0 ? (
-            <div className="col-span-2">
-              <div className="bg-white rounded-2xl p-12 text-center shadow-lg border border-slate-200">
-                <div className="text-6xl mb-4">🔍</div>
-                <h3 className="text-2xl font-bold text-slate-900 mb-2">No dentists found</h3>
-                <p className="text-slate-600">
-                  Try adjusting your filters to see more results.
-                </p>
+        <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {finalList.length === 0 ? (
+              <div className="col-span-2">
+                <div className="bg-white rounded-2xl p-12 text-center shadow-lg border border-slate-200">
+                  <div className="text-6xl mb-4">🔍</div>
+                  <h3 className="text-2xl font-bold text-slate-900 mb-2">No dentists found</h3>
+                  <p className="text-slate-600">
+                    Try adjusting your filters to see more results.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              finalList.map((dentist) => (
+                <DentistCard
+                  key={dentist.id}
+                  dentist={dentist}
+                  city={city}
+                  isSponsored={dentist.isSponsored}
+                />
+              ))
+            )}
+          </div>
+          <div className="order-first xl:order-last">
+            <div className="sticky top-6">
+              <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+                <div className="p-4 border-b border-slate-200">
+                  <h3 className="text-lg font-semibold text-slate-900">Map view</h3>
+                  <p className="text-sm text-slate-600">See practices on the map</p>
+                </div>
+                <div className="h-[420px]">
+                  <MapView dentists={finalList} origin={originCoords} cityName={cityName} />
+                </div>
               </div>
             </div>
-          ) : (
-            finalList.map((dentist) => (
-              <DentistCard
-                key={dentist.id}
-                dentist={dentist}
-                city={city}
-                isSponsored={dentist.isSponsored}
-              />
-            ))
-          )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
-

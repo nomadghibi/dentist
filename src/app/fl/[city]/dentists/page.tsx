@@ -129,6 +129,7 @@ export default async function CityDentistsPage({ params, searchParams }: PagePro
 
   // Apply distance filter
   if (query.radiusMiles && originCoords) {
+    const radiusMiles = query.radiusMiles;
     cityDentists = cityDentists
       .map((d) => {
         const coords = parseCoordinates(d.lat, d.lng);
@@ -138,7 +139,7 @@ export default async function CityDentistsPage({ params, searchParams }: PagePro
           distance: haversineDistanceMiles(originCoords, coords),
         };
       })
-      .filter((item) => item.distance !== undefined && item.distance <= query.radiusMiles)
+      .filter((item) => item.distance !== undefined && item.distance <= radiusMiles)
       .map((item) => ({
         ...item.dentist,
         distanceMiles: item.distance,

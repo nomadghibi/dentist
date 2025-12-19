@@ -90,6 +90,10 @@ export function buildDentistJsonLd(dentist: {
   state: string;
   lat?: string | null;
   lng?: string | null;
+  hours?: Record<string, { open: string; close: string } | null> | null;
+  insurances?: string[] | null;
+  servicesFlags?: Record<string, boolean | undefined> | null;
+  acceptingNewPatients?: boolean | null;
 }): Record<string, unknown> {
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -114,6 +118,56 @@ export function buildDentistJsonLd(dentist: {
     };
   }
 
+  if (dentist.hours && Object.keys(dentist.hours).length > 0) {
+    const dayMap: Record<string, string> = {
+      monday: "Monday",
+      tuesday: "Tuesday",
+      wednesday: "Wednesday",
+      thursday: "Thursday",
+      friday: "Friday",
+      saturday: "Saturday",
+      sunday: "Sunday",
+      mon: "Monday",
+      tue: "Tuesday",
+      wed: "Wednesday",
+      thu: "Thursday",
+      fri: "Friday",
+      sat: "Saturday",
+      sun: "Sunday",
+    };
+
+    jsonLd.openingHoursSpecification = Object.entries(dentist.hours).map(([day, window]) => {
+      const spec: Record<string, unknown> = {
+        "@type": "OpeningHoursSpecification",
+        dayOfWeek: dayMap[day.toLowerCase()] || day,
+      };
+
+      if (window) {
+        spec.opens = window.open;
+        spec.closes = window.close;
+      } else {
+        spec.opens = "00:00";
+        spec.closes = "00:00";
+      }
+
+      return spec;
+    });
+  }
+
+  if (dentist.insurances && dentist.insurances.length > 0) {
+    jsonLd.acceptsInsurance = dentist.insurances;
+  }
+
+  if (dentist.servicesFlags && Object.keys(dentist.servicesFlags).length > 0) {
+    const availableServices = Object.entries(dentist.servicesFlags)
+      .filter(([, enabled]) => enabled)
+      .map(([key]) => key);
+    jsonLd.availableService = availableServices;
+  }
+
+  if (dentist.acceptingNewPatients !== undefined && dentist.acceptingNewPatients !== null) {
+    jsonLd.isAcceptingNewPatients = dentist.acceptingNewPatients;
+  }
+
   return jsonLd;
 }
-

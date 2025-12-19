@@ -8,6 +8,7 @@ import { validateCitySlug } from "@/lib/slug";
 import { sortDentists, injectFeatured, type RankingQuery } from "@/lib/ranking";
 import DentistCard from "@/components/DentistCard";
 import Filters from "@/components/Filters";
+import Link from "next/link";
 
 const CITY_NAMES: Record<string, string> = {
   "palm-bay": "Palm Bay",
@@ -97,8 +98,45 @@ export default async function CityDentistsPage({ params, searchParams }: PagePro
     positions: [1, 3, 6, 10, 15],
   });
 
+  const listJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `Dentists in ${cityName}, FL`,
+    description: `Verified dentists serving patients in ${cityName}, Florida.`,
+    url: buildCanonical(`/fl/${city}/dentists`),
+    itemListElement: finalList.map((dentist, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      url: buildCanonical(`/fl/${city}/dentists/${dentist.slug}`),
+      name: dentist.name,
+    })),
+  };
+
+  const breadcrumbsJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Florida",
+        item: buildCanonical("/fl"),
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: `${cityName} Dentists`,
+        item: buildCanonical(`/fl/${city}/dentists`),
+      },
+    ],
+  };
+
   return (
     <div className="min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify([listJsonLd, breadcrumbsJsonLd]) }}
+      />
       {/* Header Section */}
       <div className="bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
@@ -113,14 +151,31 @@ export default async function CityDentistsPage({ params, searchParams }: PagePro
               </p>
             </div>
           </div>
-          <p className="text-blue-50 max-w-2xl">
-            Find trusted dentists in {cityName}, Florida. Compare services, insurance accepted, and verified practices.
-          </p>
+          <div className="space-y-3 max-w-3xl">
+            <p className="text-blue-50 text-lg leading-relaxed">
+              Discover trusted dentists in {cityName}, Florida. See who offers emergency care, kid-friendly visits,
+              Invisalign, and accepts your insurance before you book.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="#results"
+                className="inline-flex items-center gap-2 bg-white text-blue-700 px-5 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+              >
+                Book / Request a visit →
+              </Link>
+              <Link
+                href={`/fl/${city}/invisalign`}
+                className="inline-flex items-center gap-2 border border-white/70 text-white px-5 py-3 rounded-xl font-semibold hover:bg-white/10 transition-colors"
+              >
+                Compare Invisalign providers
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Content Section */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12" id="results">
         <Filters city={city} currentService={query.service} verifiedOnly={query.verifiedOnly} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -149,4 +204,3 @@ export default async function CityDentistsPage({ params, searchParams }: PagePro
     </div>
   );
 }
-

@@ -5,9 +5,10 @@ import { useState } from "react";
 interface LeadFormProps {
   dentistId: string;
   sourceUrl: string;
+  onSuccess?: () => void;
 }
 
-export default function LeadForm({ dentistId, sourceUrl }: LeadFormProps) {
+export default function LeadForm({ dentistId, sourceUrl, onSuccess }: LeadFormProps) {
   const [formData, setFormData] = useState({
     patientName: "",
     patientEmail: "",
@@ -39,6 +40,7 @@ export default function LeadForm({ dentistId, sourceUrl }: LeadFormProps) {
 
       setSubmitStatus("success");
       setFormData({ patientName: "", patientEmail: "", patientPhone: "", message: "" });
+      onSuccess?.();
     } catch (error) {
       setSubmitStatus("error");
     } finally {
@@ -137,4 +139,3 @@ export default function LeadForm({ dentistId, sourceUrl }: LeadFormProps) {
     </form>
   );
 }
-

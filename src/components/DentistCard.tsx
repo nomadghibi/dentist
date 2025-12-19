@@ -114,7 +114,7 @@ export default function DentistCard({ dentist, city, isSponsored }: DentistCardP
         </div>
       ) : null}
 
-      <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+      <div className="flex items-center justify-between pt-4 border-t border-slate-200 flex-wrap gap-3">
         <div className="text-sm">
           {dentist.phone && (
             <a 
@@ -125,12 +125,20 @@ export default function DentistCard({ dentist, city, isSponsored }: DentistCardP
             </a>
           )}
         </div>
-        <Link
-          href={`/fl/${city}/dentists/${dentist.slug}`}
-          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white text-sm font-semibold rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-200"
-        >
-          View Profile →
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/fl/${city}/dentists/${dentist.slug}#request`}
+            className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white text-sm font-semibold rounded-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
+          >
+            Book / Request
+          </Link>
+          <Link
+            href={`/fl/${city}/dentists/${dentist.slug}`}
+            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white text-sm font-semibold rounded-lg hover:shadow-lg hover:scale-105 transition-all duration-200"
+          >
+            View Profile →
+          </Link>
+        </div>
       </div>
     </div>
   );

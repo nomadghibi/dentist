@@ -3,12 +3,16 @@ import { db } from "@/db";
 import { dentists } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import VerifyButton from "@/components/VerifyButton";
+import { requireAdminAuth } from "@/lib/auth";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 export default async function AdminDentistPage({ params }: PageProps) {
+  // Require admin authentication
+  await requireAdminAuth();
+
   const { id } = await params;
 
   const [dentist] = await db.select().from(dentists).where(eq(dentists.id, id)).limit(1);

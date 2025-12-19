@@ -132,6 +132,7 @@ export async function GET(request: NextRequest) {
 
     const radiusMiles = query.radiusMiles;
     if (radiusMiles !== undefined && originCoords) {
+      const radius = radiusMiles; // Extract for type narrowing
       cityDentists = cityDentists
         .map((d) => {
           const coords = parseCoordinates(d.lat, d.lng);
@@ -141,7 +142,7 @@ export async function GET(request: NextRequest) {
             distance: haversineDistanceMiles(originCoords, coords),
           };
         })
-        .filter((item) => item.distance !== undefined && item.distance <= radiusMiles)
+        .filter((item) => item.distance !== undefined && item.distance <= radius)
         .map((item) => ({
           ...item.dentist,
           distanceMiles: item.distance,

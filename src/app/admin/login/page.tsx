@@ -28,7 +28,7 @@ export default function AdminLoginPage() {
         throw new Error(data.error || "Login failed");
       }
 
-      // TODO: Store session/token
+      // Session cookie is automatically stored by the browser
       router.push("/admin");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");

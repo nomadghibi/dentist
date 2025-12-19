@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserByEmail, verifyPassword } from "@/lib/auth";
+import { getUserByEmail, verifyPassword, createToken, AUTH_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from "@/lib/auth";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -28,10 +28,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    // TODO: Create session/token and return it
-    // For MVP, return success (implement proper session management)
+    // Create session token
+    const token = createToken(user.id, user.email, user.role);
 
-    return NextResponse.json({ success: true, userId: user.id });
+    // Set httpOnly cookie
+    const response = NextResponse.json({
+      success: true,
+      userId: user.id,
+      email: user.email,
+      role: user.role
+    });
+
+    response.cookies.set(AUTH_COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: SESSION_MAX_AGE_SECONDS,
+      path: "/",
+    });
+
+    return response;
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Invalid input", details: error.errors }, { status: 400 });

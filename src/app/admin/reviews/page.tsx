@@ -3,10 +3,13 @@ import { dentists, reviews } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import ReviewModerationPanel from "@/components/ReviewModerationPanel";
 import Link from "next/link";
+import { requireAdminAuth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminReviewsPage() {
+  // Require admin authentication
+  await requireAdminAuth();
   const pendingReviews = await db
     .select({
       id: reviews.id,

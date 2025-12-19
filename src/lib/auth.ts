@@ -169,3 +169,39 @@ export async function getServerSession(request?: Request): Promise<Session | nul
 export function deleteToken(): void {
   // Stateless token – clearing the cookie removes access
 }
+
+/**
+ * Require admin authentication for server components
+ * Redirects to login if not authenticated or not an admin
+ * Note: redirect() throws an error and never returns, so code after it is unreachable
+ */
+export async function requireAdminAuth(): Promise<Session> {
+  const session = await getServerSession();
+
+  if (!session || session.role !== "admin") {
+    const { redirect } = await import("next/navigation");
+    redirect("/admin/login");
+    // This line is unreachable but needed for TypeScript
+    throw new Error("Redirecting to login");
+  }
+
+  return session;
+}
+
+/**
+ * Require admin authentication for API routes
+ * Returns session if authenticated, throws error with appropriate status if not
+ */
+export async function requireAdminAuthAPI(request: Request): Promise<Session> {
+  const session = await getServerSession(request);
+
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+
+  if (session.role !== "admin") {
+    throw new Error("Forbidden");
+  }
+
+  return session;
+}

@@ -3,14 +3,13 @@ import { dentists, adminAudit, reviews } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import ReviewModerationPanel from "@/components/ReviewModerationPanel";
+import { requireAdminAuth } from "@/lib/auth";
 
 export const dynamic = 'force-dynamic';
 
-// TODO: Add proper auth check
-
 export default async function AdminDashboardPage() {
-  // TODO: Check admin session
-  // For now, this is a placeholder
+  // Require admin authentication
+  await requireAdminAuth();
 
   const unverifiedCount = await db
     .select({ count: dentists.id })

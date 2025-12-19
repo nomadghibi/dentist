@@ -129,6 +129,14 @@ export const leads = pgTable("leads", {
   status: leadStatusEnum("status").default("new").notNull(),
   leadScore: integer("lead_score"), // 0-100
   leadScoreReasons: jsonb("lead_score_reasons").$type<string[]>(),
+  notes: jsonb("notes").$type<
+    Array<{
+      id: string;
+      body: string;
+      author: string;
+      createdAt: string;
+    }>
+  >(),
   contactedAt: timestamp("contacted_at"),
   bookedAt: timestamp("booked_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -373,4 +381,3 @@ export const verificationRequestsRelations = relations(verificationRequests, ({ 
     references: [dentists.id],
   }),
 }));
-

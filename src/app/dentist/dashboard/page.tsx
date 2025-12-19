@@ -6,9 +6,29 @@ import Link from "next/link";
 import AnalyticsPanel from "@/components/AnalyticsPanel";
 import AvailabilityForm from "@/components/AvailabilityForm";
 import PricingForm from "@/components/PricingForm";
-import LeadList from "@/components/LeadList";
 import { getEntitlements } from "@/lib/entitlements";
 import { getServerSession } from "@/lib/auth";
+import LeadInbox from "@/components/LeadInbox";
+import type { AnalyticsResult } from "@/lib/analytics";
+
+type InboxLead = {
+  id: string;
+  patientName: string;
+  patientEmail: string;
+  patientPhone: string | null;
+  message: string | null;
+  status: "new" | "contacted" | "booked" | "lost";
+  leadScore: number | null;
+  createdAt: string;
+  contactedAt: string | null;
+  bookedAt: string | null;
+  notes: Array<{
+    id: string;
+    body: string;
+    author: string;
+    createdAt: string;
+  }>;
+};
 
 export default async function DentistDashboardPage() {
   // Get user from session
@@ -44,8 +64,8 @@ export default async function DentistDashboardPage() {
   const entitlements = getEntitlements(subscription, dentist);
 
   // Fetch analytics (if entitled)
-  let analytics = null;
-  let recentLeads: any[] = [];
+  let analytics: AnalyticsResult | null = null;
+  let inboxLeads: InboxLead[] = [];
 
   if (entitlements.canViewBasicAnalytics) {
     try {
@@ -70,16 +90,14 @@ export default async function DentistDashboardPage() {
 
       analytics = getAnalytics(dentistEvents, dentistLeads);
 
-      recentLeads = dentistLeads
+      inboxLeads = dentistLeads
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 10)
         .map((lead) => ({
-          id: lead.id,
-          patientName: lead.patientName,
-          patientEmail: lead.patientEmail,
-          leadScore: lead.leadScore,
-          status: lead.status,
+          ...lead,
           createdAt: lead.createdAt.toISOString(),
+          contactedAt: lead.contactedAt ? lead.contactedAt.toISOString() : null,
+          bookedAt: lead.bookedAt ? lead.bookedAt.toISOString() : null,
+          notes: (lead.notes || []) as InboxLead["notes"],
         }));
     } catch (error) {
       console.error("Error fetching analytics:", error);
@@ -145,10 +163,15 @@ export default async function DentistDashboardPage() {
           </div>
         )}
 
-        {/* Lead List */}
+        {/* Lead Inbox */}
         {entitlements.canViewLeadScoring && (
           <div className="mb-8">
-            <LeadList leads={recentLeads} canViewScores={true} />
+            <LeadInbox
+              initialLeads={inboxLeads}
+              dentistName={dentist.name}
+              userEmail={session.email}
+              canExportCSV={entitlements.canExportCSV}
+            />
           </div>
         )}
 
@@ -158,10 +181,10 @@ export default async function DentistDashboardPage() {
             <AvailabilityForm
               initialData={{
                 acceptingNewPatients: dentist.acceptingNewPatients,
-                availabilityFlags: dentist.availabilityFlags as any,
+                availabilityFlags: dentist.availabilityFlags ?? undefined,
               }}
             />
-            <PricingForm initialData={dentist.pricingRanges as any} />
+            <PricingForm initialData={dentist.pricingRanges ?? undefined} />
           </div>
         )}
 

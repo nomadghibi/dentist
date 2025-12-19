@@ -64,6 +64,7 @@ Required variables:
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` - Stripe publishable key
 - `STRIPE_WEBHOOK_SECRET` - Stripe webhook secret (for production)
 - `RESEND_API_KEY` - Resend API key
+- `AUTH_SECRET` - Long, random string for signing secure session cookies
 - `JOB_SECRET_TOKEN` - Secret token for ingestion API
 - `NEXT_PUBLIC_APP_URL` - Your app URL (e.g., `http://localhost:3000`)
 
@@ -212,4 +213,3 @@ pnpm test:watch
 ## License
 
 Proprietary
-

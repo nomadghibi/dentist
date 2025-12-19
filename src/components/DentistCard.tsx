@@ -32,12 +32,29 @@ export default function DentistCard({ dentist, city, isSponsored }: DentistCardP
             >
               {dentist.name}
             </Link>
+            {isSponsored && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200">
+                ⭐ Featured
+              </span>
+            )}
           </div>
-          {dentist.verifiedStatus === "verified" && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
-              <span>✓</span> Verified
-            </span>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {dentist.reviewCount > 0 ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                ⭐ {dentist.averageRating?.toFixed(1) ?? "5.0"}{" "}
+                <span className="text-slate-500">
+                  ({dentist.reviewCount} review{dentist.reviewCount === 1 ? "" : "s"})
+                </span>
+              </span>
+            ) : (
+              <span className="text-xs text-slate-500">No reviews yet</span>
+            )}
+            {dentist.verifiedStatus === "verified" && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                <span>✓</span> Verified
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -92,6 +109,26 @@ export default function DentistCard({ dentist, city, isSponsored }: DentistCardP
           </span>
         )}
       </div>
+
+      {(dentist.badges?.license_verified || dentist.badges?.insurance_verified || dentist.badges?.pediatric_friendly) && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {dentist.badges?.license_verified && (
+            <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full border border-blue-100">
+              License verified
+            </span>
+          )}
+          {dentist.badges?.insurance_verified && (
+            <span className="px-3 py-1 bg-teal-50 text-teal-700 text-xs font-semibold rounded-full border border-teal-100">
+              Insurance verified
+            </span>
+          )}
+          {dentist.badges?.pediatric_friendly && (
+            <span className="px-3 py-1 bg-purple-50 text-purple-700 text-xs font-semibold rounded-full border border-purple-100">
+              Pediatric friendly
+            </span>
+          )}
+        </div>
+      )}
 
       {dentist.insurances?.length ? (
         <div className="mb-4">

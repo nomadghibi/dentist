@@ -1,8 +1,8 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { dentists } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { dentists, reviews, subscriptions } from "@/db/schema";
+import { eq, and, desc } from "drizzle-orm";
 import { buildDentistProfileMetadata, buildDentistJsonLd, buildCanonical } from "@/lib/seo";
 import { validateCitySlug } from "@/lib/slug";
 import ProfileViewTracker from "@/components/ProfileViewTracker";
@@ -50,6 +50,24 @@ export default async function DentistProfilePage({ params }: PageProps) {
   if (!dentist) {
     notFound();
   }
+
+  const [subscription] = await db
+    .select()
+    .from(subscriptions)
+    .where(eq(subscriptions.dentistId, dentist.id))
+    .limit(1);
+
+  const approvedReviews = await db
+    .select()
+    .from(reviews)
+    .where(and(eq(reviews.dentistId, dentist.id), eq(reviews.status, "approved")))
+    .orderBy(desc(reviews.createdAt))
+    .limit(10);
+
+  const isFeatured =
+    !!subscription &&
+    subscription.status === "active" &&
+    (subscription.plan === "pro" || subscription.plan === "premium");
 
   const jsonLd = buildDentistJsonLd(dentist);
   const breadcrumbJsonLd = {
@@ -102,8 +120,27 @@ export default async function DentistProfilePage({ params }: PageProps) {
                       ✓ Verified
                     </span>
                   )}
+                  {isFeatured && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
+                      ⭐ Featured
+                    </span>
+                  )}
                 </div>
                 <h1 className="text-3xl font-bold text-gray-900">{dentist.name}</h1>
+                <div className="flex flex-wrap items-center gap-3">
+                  {dentist.reviewCount > 0 ? (
+                    <>
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                        ⭐ {dentist.averageRating?.toFixed(1) ?? "5.0"}
+                      </span>
+                      <span className="text-sm text-slate-600">
+                        {dentist.reviewCount} review{dentist.reviewCount === 1 ? "" : "s"}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-sm text-slate-500">No patient reviews yet</span>
+                  )}
+                </div>
                 {dentist.address && (
                   <p className="text-sm text-slate-600 flex items-center gap-2">
                     <span>📍</span> {dentist.address}
@@ -123,6 +160,21 @@ export default async function DentistProfilePage({ params }: PageProps) {
                   {dentist.acceptingNewPatients && (
                     <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full border border-emerald-100">
                       Accepting new patients
+                    </span>
+                  )}
+                  {dentist.badges?.license_verified && (
+                    <span className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full border border-blue-100">
+                      License verified
+                    </span>
+                  )}
+                  {dentist.badges?.insurance_verified && (
+                    <span className="px-3 py-1 bg-teal-50 text-teal-700 text-xs font-semibold rounded-full border border-teal-100">
+                      Insurance verified
+                    </span>
+                  )}
+                  {dentist.badges?.pediatric_friendly && (
+                    <span className="px-3 py-1 bg-purple-50 text-purple-700 text-xs font-semibold rounded-full border border-purple-100">
+                      Pediatric friendly
                     </span>
                   )}
                 </div>
@@ -145,6 +197,42 @@ export default async function DentistProfilePage({ params }: PageProps) {
                   Book / Request
                 </Link>
               </div>
+            </div>
+
+            <div className="mt-8">
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">Patient reviews & ratings</h2>
+              {approvedReviews.length === 0 ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                  No public reviews yet. Once patients submit feedback, approved reviews will appear here.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {approvedReviews.map((review) => (
+                    <div
+                      key={review.id}
+                      className="border border-slate-200 rounded-xl p-4 bg-slate-50 space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200">
+                            ⭐ {review.rating.toFixed(1)}
+                          </span>
+                          {review.wouldRecommend !== null && (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 border border-emerald-200">
+                              {review.wouldRecommend ? "Would recommend" : "Would not recommend"}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          {new Date(review.createdAt as Date).toLocaleDateString()}
+                        </p>
+                      </div>
+                      {review.title && <p className="font-semibold text-slate-900">{review.title}</p>}
+                      {review.comment && <p className="text-sm text-slate-700">{review.comment}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

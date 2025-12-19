@@ -5,7 +5,9 @@
 
 import { NextRequest } from "next/server";
 
-const CRON_SECRET = process.env.CRON_SECRET || "";
+function getCronSecret() {
+  return process.env.CRON_SECRET || "";
+}
 
 /**
  * Verify that a request is from Vercel Cron
@@ -25,7 +27,8 @@ export function verifyCronRequest(request: NextRequest): {
   const authHeader = request.headers.get("authorization");
   if (authHeader?.startsWith("Bearer ")) {
     const token = authHeader.substring(7);
-    if (token === CRON_SECRET && CRON_SECRET) {
+    const cronSecret = getCronSecret();
+    if (token === cronSecret && cronSecret) {
       return { valid: true };
     }
     return { valid: false, reason: "Invalid cron secret" };
@@ -33,7 +36,8 @@ export function verifyCronRequest(request: NextRequest): {
 
   // Method 3: Check for cron secret in query param (less secure, but fallback)
   const querySecret = request.nextUrl.searchParams.get("secret");
-  if (querySecret === CRON_SECRET && CRON_SECRET) {
+  const cronSecret = getCronSecret();
+  if (querySecret === cronSecret && cronSecret) {
     return { valid: true };
   }
 
@@ -47,4 +51,3 @@ export function isVercelCron(request: NextRequest): boolean {
   const header = request.headers.get("x-vercel-cron");
   return header === "1" || header === "true";
 }
-

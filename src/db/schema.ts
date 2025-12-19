@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, jsonb, pgEnum, boolean, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, jsonb, pgEnum, boolean, uuid, real } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 // Enums
@@ -14,6 +14,7 @@ export const eventTypeEnum = pgEnum("event_type", [
   "website_click",
   "match_impression",
 ]);
+export const reviewStatusEnum = pgEnum("review_status", ["pending", "approved", "rejected"]);
 
 // Users table
 export const users = pgTable("users", {
@@ -82,6 +83,8 @@ export const dentists = pgTable("dentists", {
     anxiety_friendly?: boolean;
     pediatric_friendly?: boolean;
   }>(),
+  averageRating: real("average_rating").default(0),
+  reviewCount: integer("review_count").default(0).notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
@@ -295,6 +298,24 @@ export const verificationRequests = pgTable("verification_requests", {
   createdAtIdx: { columns: [table.createdAt] },
 }));
 
+// Public reviews
+export const reviews = pgTable("reviews", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  dentistId: uuid("dentist_id").references(() => dentists.id).notNull(),
+  rating: integer("rating").notNull(), // 1-5
+  title: text("title"),
+  comment: text("comment"),
+  wouldRecommend: boolean("would_recommend"),
+  status: reviewStatusEnum("status").default("pending").notNull(),
+  source: text("source"), // e.g. "patient", "import"
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  dentistIdIdx: { columns: [table.dentistId] },
+  statusIdx: { columns: [table.status] },
+  dentistStatusIdx: { columns: [table.dentistId, table.status] },
+}));
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   verifiedDentists: many(dentists),
@@ -310,6 +331,7 @@ export const dentistsRelations = relations(dentists, ({ one, many }) => ({
     fields: [dentists.userId],
     references: [users.id],
   }),
+  reviews: many(reviews),
 }));
 
 export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
@@ -378,6 +400,13 @@ export const leadFollowupsRelations = relations(leadFollowups, ({ one }) => ({
 export const verificationRequestsRelations = relations(verificationRequests, ({ one }) => ({
   dentist: one(dentists, {
     fields: [verificationRequests.dentistId],
+    references: [dentists.id],
+  }),
+}));
+
+export const reviewsRelations = relations(reviews, ({ one }) => ({
+  dentist: one(dentists, {
+    fields: [reviews.dentistId],
     references: [dentists.id],
   }),
 }));

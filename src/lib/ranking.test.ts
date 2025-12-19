@@ -11,7 +11,7 @@ const createMockDentist = (overrides: Partial<Dentist> = {}): Dentist => ({
   id: "1",
   npi: "1234567890",
   slug: "test-dentist",
-  name: "Test Dentist",
+  name: "",
   citySlug: "palm-bay",
   cityName: "Palm Bay",
   state: "FL",
@@ -169,4 +169,3 @@ describe("injectFeatured", () => {
     expect(result[0].isSponsored).toBe(true);
   });
 });
-

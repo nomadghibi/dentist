@@ -1,34 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { dentists, adminAudit, users } from "@/db/schema";
+import { dentists, adminAudit } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { getServerSession } from "@/lib/auth";
-import type { InferSelectModel } from "drizzle-orm";
+import { getAdminUser } from "@/app/api/admin/helpers";
 
 const verifySchema = z.object({
   dentistId: z.string().uuid(),
   verified: z.boolean(),
   verificationSource: z.string().optional(),
 });
-
-type User = InferSelectModel<typeof users>;
-type AdminUser = User & { role: "admin" };
-
-function isAdmin(user: User | null | undefined): user is AdminUser {
-  return !!user && user.role === "admin";
-}
-
-async function getAdminUser(request: NextRequest): Promise<AdminUser | null> {
-  const session = await getServerSession(request);
-  
-  if (!session || session.role !== "admin") return null;
-
-  const [user] = await db.select().from(users).where(eq(users.id, session.userId)).limit(1);
-  if (!user || !isAdmin(user)) return null;
-  
-  return user;
-}
 
 export async function POST(request: NextRequest) {
   const adminUser = await getAdminUser(request);
@@ -73,4 +54,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-

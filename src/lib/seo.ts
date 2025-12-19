@@ -94,6 +94,8 @@ export function buildDentistJsonLd(dentist: {
   insurances?: string[] | null;
   servicesFlags?: Record<string, boolean | undefined> | null;
   acceptingNewPatients?: boolean | null;
+  averageRating?: number | null;
+  reviewCount?: number | null;
 }): Record<string, unknown> {
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -167,6 +169,19 @@ export function buildDentistJsonLd(dentist: {
 
   if (dentist.acceptingNewPatients !== undefined && dentist.acceptingNewPatients !== null) {
     jsonLd.isAcceptingNewPatients = dentist.acceptingNewPatients;
+  }
+
+  if (
+    dentist.reviewCount !== undefined &&
+    dentist.reviewCount !== null &&
+    dentist.reviewCount > 0 &&
+    typeof dentist.averageRating === "number"
+  ) {
+    jsonLd.aggregateRating = {
+      "@type": "AggregateRating",
+      ratingValue: dentist.averageRating,
+      reviewCount: dentist.reviewCount,
+    };
   }
 
   return jsonLd;
